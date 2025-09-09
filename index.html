@@ -1,116 +1,145 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Furniture 3D Demo1</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Furniture 3D Demo</title>
+
+  <!-- QR generator -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+
   <style>
-    body { font-family: sans-serif; text-align: center; padding: 2rem; }
-    .preview-image { width: 90vw; max-width: 400px; margin-bottom: 1rem; }
-    .next-button, #ar-button {
-      margin: 0.5rem; padding: 1rem 2rem; border: none; border-radius: 8px;
-      background: #1a73e8; color: #fff; font-size: 1.1rem; cursor: pointer;
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
+    html,body{height:100%;margin:0;}
+    body {
+      margin: 0;
+      font-family: 'Montserrat', sans-serif;
+      background: #f5f7fa;
+      color: #333;
+      display:flex;
+      flex-direction:column;
+      min-height:100vh;
+      align-items:center;
+      justify-content:center;
+      padding:2rem;
+      box-sizing:border-box;
+      text-align:center;
     }
-    #qr-wrapper { display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
-    #qr-container { background: #fff; padding: 1rem; border-radius: 12px; display: flex; gap: 1rem; }
-    #qr-container canvas { width: 150px; height: 150px; }
-    #qr-close { position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 1.5rem; cursor: pointer; }
+    h1{font-weight:700;font-size:2.2rem;margin:0 0 0.5rem;color:#1a73e8}
+    p.description{font-size:1rem;margin:0 0 1.25rem;color:#555;max-width:640px}
+    .image-wrapper{max-width:90vw;margin-bottom:1.25rem}
+    .preview-image{width:90vw;max-width:480px;height:auto;border-radius:12px;box-shadow:0 4px 15px rgba(26,115,232,0.16);object-fit:contain}
+    #ar-button{background:#1a73e8;color:#fff;border:0;border-radius:10px;padding:12px 22px;font-size:1.05rem;cursor:pointer;box-shadow:0 6px 12px rgba(26,115,232,0.25)}
+    #ar-button:hover{background:#155ab6}
+    /* QR modal */
+    #qr-wrapper{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center}
+    #qr-container{background:#fff;border-radius:12px;padding:18px;display:flex;gap:18px;align-items:center;min-width:300px}
+    #qr-container div{text-align:center}
+    #qr-container p{margin:0 0 8px;font-weight:600}
+    #qr-close{position:absolute;top:12px;right:12px;background:none;border:none;font-size:22px;cursor:pointer;color:#666}
+    @media(max-width:480px){
+      #qr-container{flex-direction:column;width:90vw}
+      .preview-image{max-height:260px}
+    }
   </style>
 </head>
 <body>
 
   <h1>Furniture 3D Demo</h1>
-  <img id="model-image" src="https://raw.githubusercontent.com/soumbhat/somemodels/main/bed.png" class="preview-image" />
-  <br>
-  <button class="next-button" id="next-btn">Next</button>
+  <p class="description">View this piece in your space — tap the button to open AR on a phone, or scan the QR codes from your desktop.</p>
+
+  <div class="image-wrapper">
+    <img id="model-image" class="preview-image"
+      src="https://www.hootjudkins.com/media/catalog/product/cache/89930ad52d6db4e0d3a3c6b21adb2ab2/S/A/SASHEN72BENCHECSHS13DWK17.jpg"
+      alt="Furniture preview" />
+  </div>
+
   <button id="ar-button">View in AR</button>
 
-  <!-- QR Modal -->
-  <div id="qr-wrapper">
+  <!-- QR modal -->
+  <div id="qr-wrapper" role="dialog" aria-modal="true" aria-labelledby="qr-title">
     <div id="qr-container">
-      <button id="qr-close">&times;</button>
+      <button id="qr-close" aria-label="Close QR popup">&times;</button>
       <div>
         <p>iPhone (iOS)</p>
-        <canvas id="qr-ios"></canvas>
+        <canvas id="qr-ios" width="180" height="180"></canvas>
       </div>
       <div>
         <p>Android</p>
-        <canvas id="qr-android"></canvas>
+        <canvas id="qr-android" width="180" height="180"></canvas>
       </div>
     </div>
   </div>
 
-  <script>
-    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+<script>
+  // Single model config (exact links you provided)
+  const model = {
+    name: "Bench",
+    image: "https://www.hootjudkins.com/media/catalog/product/cache/89930ad52d6db4e0d3a3c6b21adb2ab2/S/A/SASHEN72BENCHECSHS13DWK17.jpg",
+    glb: "https://raw.githubusercontent.com/KhedaarK/furniture-view-in-your-room-kk/main/resized.glb",
+    usdz: "https://raw.githubusercontent.com/KhedaarK/furniture-view-in-your-room-kk/main/resizedusdz.usdz"
+  };
 
-    const arButton = document.getElementById('ar-button');
-    const nextBtn = document.getElementById('next-btn');
-    const image = document.getElementById('model-image');
-    const qrWrapper = document.getElementById('qr-wrapper');
-    const qrClose = document.getElementById('qr-close');
-    const qrIosCanvas = document.getElementById('qr-ios');
-    const qrAndroidCanvas = document.getElementById('qr-android');
+  // platform detection
+  const ua = navigator.userAgent || "";
+  const isIOS = /iPhone|iPad|iPod/i.test(ua);
+  const isAndroid = /Android/i.test(ua);
+  const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(ua);
 
-    const models = [
-      {
-        name: "Bed",
-        image: "https://raw.githubusercontent.com/soumbhat/somemodels/main/bed.png",
-        glb: "https://raw.githubusercontent.com/soumbhat/somemodels/main/bed.glb",
-        usdz: "https://huggingface.co/datasets/soumbhat/Demo_furniture/resolve/main/bed.usdz"
-      },
-      {
-        name: "Sofa",
-        image: "https://raw.githubusercontent.com/soumbhat/somemodels/main/untitled-shoot-sofa.jpg",
-        glb: "https://raw.githubusercontent.com/soumbhat/somemodels/main/texture_mesh_c59b717cae6ac53f_shaded.glb",
-        usdz: "https://huggingface.co/datasets/soumbhat/Demo_furniture/resolve/main/texture_mesh_c59b717cae6ac53f_shaded%20(1).usdz"
-      }
-    ];
+  // DOM
+  const arButton = document.getElementById('ar-button');
+  const qrWrapper = document.getElementById('qr-wrapper');
+  const qrClose = document.getElementById('qr-close');
+  const qrIosCanvas = document.getElementById('qr-ios');
+  const qrAndroidCanvas = document.getElementById('qr-android');
+  const modelImageEl = document.getElementById('model-image');
 
-    let currentIndex = 0;
+  // set preview (redundant but ensures image matches model)
+  modelImageEl.src = model.image;
 
-    function updateImage() {
-      image.src = models[currentIndex].image;
+  // helper: Android Scene Viewer https URL (for QR scanning)
+  const androidSceneViewerUrl = `https://arvr.google.com/scene-viewer/1.0?file=${encodeURIComponent(model.glb)}&mode=ar_preferred`;
+
+  // helper: Android intent URL (for direct mobile button navigation)
+  const androidIntentUrl = `intent://arvr.google.com/scene-viewer/1.0?file=${encodeURIComponent(model.glb)}&mode=ar_preferred#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;end;`;
+
+  // generate QR codes that point to the viewer URLs (iOS -> USDZ, Android -> Scene Viewer HTTPS)
+  function generateQRCodes() {
+    // iOS: direct USDZ link (Quick Look)
+    new QRious({ element: qrIosCanvas, value: model.usdz, size: 180 });
+    // Android: Scene Viewer HTTPS URL
+    new QRious({ element: qrAndroidCanvas, value: androidSceneViewerUrl, size: 180 });
+  }
+
+  // button behavior
+  arButton.addEventListener('click', () => {
+    if (isIOS) {
+      // iOS: go directly to USDZ (Quick Look)
+      window.location.href = model.usdz;
+    } else if (isAndroid && isMobile) {
+      // Android mobile: use intent URL to open Scene Viewer app if available
+      window.location.href = androidIntentUrl;
+    } else if (!isMobile) {
+      // Desktop: show QR codes so user can scan appropriate viewer link
+      generateQRCodes();
+      qrWrapper.style.display = "flex";
+      // center align (flex)
+      qrWrapper.style.alignItems = "center";
+      qrWrapper.style.justifyContent = "center";
+    } else {
+      // fallback: open Scene Viewer https url in current browser
+      window.location.href = androidSceneViewerUrl;
     }
+  });
 
-    function generateQRCodes() {
-      const model = models[currentIndex];
-      const iosUrl = model.usdz;
-      const androidIntent = `https://arvr.google.com/scene-viewer/1.0?file=${encodeURIComponent(model.glb)}&mode=ar_preferred`;
+  // close the modal
+  qrClose.addEventListener('click', () => {
+    qrWrapper.style.display = "none";
+  });
 
-      new QRious({ element: qrIosCanvas, value: iosUrl, size: 150 });
-      new QRious({ element: qrAndroidCanvas, value: androidIntent, size: 150 });
-    }
-
-    nextBtn.addEventListener('click', () => {
-      currentIndex = (currentIndex + 1) % models.length;
-      updateImage();
-      if (!isMobile) generateQRCodes();
-    });
-
-    qrClose.addEventListener('click', () => {
-      qrWrapper.style.display = 'none';
-    });
-
-    arButton.addEventListener('click', () => {
-      const model = models[currentIndex];
-      if (isIOS) {
-        window.location.href = model.usdz;
-      } else if (!isMobile) {
-        generateQRCodes();
-        qrWrapper.style.display = 'flex';
-      } else {
-        const intentUrl = `intent://arvr.google.com/scene-viewer/1.0?file=${encodeURIComponent(model.glb)}&mode=ar_preferred#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;end;`;
-        window.location.href = intentUrl;
-      }
-    });
-
-    // init
-    updateImage();
-    if (!isMobile) generateQRCodes();
-  </script>
+  // generate QR on load for desktop users (so they can see immediately if desired)
+  if (!isMobile) generateQRCodes();
+</script>
 
 </body>
 </html>
